@@ -2,13 +2,13 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 
-const configPath = "wrangler.jsonc";
+const configPath = "wrangler.local.jsonc";
 const binding = "RENEWAL_STATE";
 
 function wrangler(...args) {
   const result = spawnSync(
     process.execPath,
-    ["node_modules/wrangler/bin/wrangler.js", ...args],
+    ["node_modules/wrangler/bin/wrangler.js", ...args, "--config", configPath],
     { stdio: "inherit" },
   );
   if (result.error) throw result.error;
