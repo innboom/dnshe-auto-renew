@@ -1,6 +1,6 @@
 # DNSHE 自动续期 Worker
 
-用 Cloudflare Workers 定期为一个 DNSHE 域名办理免费续期。每周一北京时间 09:17 检查一次，域名仍有效且距离到期超过 24 小时、最多 90 天时，调用 DNSHE 的续期接口。Cloudflare KV 记录最近一次检查结果。
+用 Cloudflare Workers 定期为同一 DNSHE 账号下的域名办理免费续期。每周一北京时间 09:17 检查一次，域名仍有效且距离到期超过 24 小时、最多 90 天时，调用 DNSHE 的续期接口。Cloudflare KV 记录最近一次检查结果。
 
 ## 在 Cloudflare 网页部署
 
@@ -24,7 +24,7 @@
 
 | 名称（区分大小写） | 类型 | 值填什么 |
 | --- | --- | --- |
-| `DNSHE_DOMAIN` | 文本（Text） | 在 DNSHE 注册的完整域名，例如 `myapp.us.ci`。只填域名，省略 `https://` 和路径。 |
+| `DNSHE_DOMAIN` | 文本（Text） | 填一个完整域名，或用英文逗号分隔同一账号下的多个域名，例如 `innboom.us.ci, myapp.de5.net, demo.cc.cd`。省略 `https://` 和路径。 |
 | `DNSHE_API_KEY` | 密钥（Secret） | DNSHE「API 管理」生成的 API Key。 |
 | `DNSHE_API_SECRET` | 密钥（Secret） | 与上面 API Key 配套的 API Secret。 |
 
@@ -33,7 +33,7 @@
 ### 3. 检查首次运行
 
 1. 在 Worker 的**绑定**中确认有 `RENEWAL_STATE`，在定时触发器中确认有 `17 1 * * MON`，即北京时间每周一 **09:17**。
-2. 首次定时运行后，点击 **设置 → 绑定**里的 KV 命名空间，打开 **KV 条目 → `last_check`**。检查 `checkedAt` 是否是最近一次运行的时间（UTC），然后查看 `outcome`。新注册的域名通常会显示 `not_due`，表示查询成功，当前无需续期。
+2. 首次定时运行后，点击 **设置 → 绑定**里的 KV 命名空间。单域名可查看 `last_check`，多域名可按 `last_check:域名` 查看各自结果，例如 `last_check:innboom.us.ci`。检查 `checkedAt` 是否是最近一次运行的时间（UTC），然后查看 `outcome`。新注册的域名通常会显示 `not_due`，表示查询成功，当前无需续期。
 3. 如果定时点过去后仍没有 `last_check`，或状态为 `error`，到 Worker 的 **可观测性（Observability）→ 日志**查看运行记录。其他状态见下方「检查运行结果」。
 
 ## 可选的本地初始化

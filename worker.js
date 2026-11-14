@@ -70,19 +70,45 @@ export async function checkRenewal(env, now = Date.now()) {
 
 export default {
   async scheduled(_controller, env) {
-    let event;
-    try {
-      event = await checkRenewal(env);
-    } catch (error) {
-      await saveResult(env, { outcome: "error", message: error.message });
-      throw error;
+    const domains = [...new Set(
+      (env.DNSHE_DOMAIN ?? "").split(",").map((domain) => domain.trim().toLowerCase()).filter(Boolean),
+    )];
+    if (domains.length === 0) {
+      const message = "Missing DNSHE_DOMAIN";
+      await saveResult(env, "last_check", { outcome: "error", message });
+      throw new Error(message);
     }
-    await saveResult(env, event);
+
+    const failures = [];
+    for (const domain of domains) {
+      try {
+        let event;
+        try {
+          event = await checkRenewal({ ...env, DNSHE_DOMAIN: domain });
+        } catch (error) {
+          event = { outcome: "error", message: error.message };
+          failures.push(error);
+        }
+        const result = { domain, ...event };
+        await saveResult(env, `last_check:${domain}`, result);
+        if (domains.length === 1) await saveResult(env, "last_check", result);
+      } catch (error) {
+        console.error(JSON.stringify({ domain, outcome: "error", message: error.message }));
+        failures.push(error);
+      }
+    }
+    if (domains.length > 1) {
+      await saveResult(env, "last_check", {
+        outcome: failures.length ? "error" : "checked",
+        domains,
+      });
+    }
+    if (failures.length) throw new AggregateError(failures, "One or more DNSHE checks failed");
   },
 };
 
-async function saveResult(env, event) {
+async function saveResult(env, key, event) {
   const result = { ...event, checkedAt: new Date().toISOString() };
   console.log(JSON.stringify(result));
-  await env.RENEWAL_STATE.put("last_check", JSON.stringify(result));
+  await env.RENEWAL_STATE.put(key, JSON.stringify(result));
 }

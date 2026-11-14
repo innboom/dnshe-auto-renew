@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkRenewal } from "./worker.js";
+import worker, { checkRenewal } from "./worker.js";
 
 const env = {
   DNSHE_DOMAIN: "demo.de5.net",
@@ -14,6 +14,24 @@ const eligible = {
   status: "active",
   expires_at: "2027-01-15 00:00:00",
 };
+
+test("deduplicates domains and records later results after a failed check", async (t) => {
+  const results = new Map();
+  const calls = t.mock.method(globalThis, "fetch", async (url) => {
+    const prefix = new URL(url).searchParams.get("search");
+    if (prefix === "missing") return Response.json({ success: true, subdomains: [] });
+    return Response.json({ success: true, subdomains: [{ ...eligible, never_expires: 1 }] });
+  });
+  await assert.rejects(worker.scheduled({}, {
+    ...env,
+    DNSHE_DOMAIN: " missing.us.ci, DEMO.DE5.NET, demo.de5.net, ",
+    RENEWAL_STATE: { put: async (key, value) => results.set(key, JSON.parse(value)) },
+  }), AggregateError);
+  assert.equal(calls.mock.callCount(), 2);
+  assert.equal(results.get("last_check:missing.us.ci").outcome, "error");
+  assert.equal(results.get("last_check:demo.de5.net").outcome, "never_expires");
+  assert.deepEqual(results.get("last_check").domains, ["missing.us.ci", "demo.de5.net"]);
+});
 
 test("renews only the configured domain and verifies the new date and price", async (t) => {
   const calls = t.mock.method(globalThis, "fetch", async (url, options) => {
