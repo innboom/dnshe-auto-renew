@@ -1,0 +1,7 @@
+node_modules/
+.npm-cache/
+.wrangler/
+wrangler.jsonc
+.dev.vars*
+.env*
+secrets.json

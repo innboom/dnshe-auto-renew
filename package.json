@@ -1,0 +1,14 @@
+{
+  "name": "dnshe-auto-renew",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "setup": "node setup.js",
+    "deploy": "wrangler deploy",
+    "test": "node --test"
+  },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}
