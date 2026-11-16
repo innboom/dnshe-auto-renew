@@ -34,7 +34,7 @@ async function request(action, env, options = {}) {
   return data;
 }
 
-export async function checkRenewal(env, now = Date.now()) {
+async function lookupDomain(env) {
   if (!env.DNSHE_API_KEY || !env.DNSHE_API_SECRET || !env.DNSHE_DOMAIN) {
     throw new Error("Missing DNSHE_DOMAIN, DNSHE_API_KEY or DNSHE_API_SECRET");
   }
@@ -45,6 +45,11 @@ export async function checkRenewal(env, now = Date.now()) {
   });
   const record = result.subdomains?.find((item) => item.full_domain === domain);
   if (!record) throw new Error("Configured domain not found in DNSHE");
+  return record;
+}
+
+export async function checkRenewal(env, now = Date.now()) {
+  const record = await lookupDomain(env);
   if ([true, 1, "1"].includes(record.never_expires)) return { outcome: "never_expires" };
   const expiration = timestamp(record.expires_at);
   if (record.status !== "active" || !Number.isFinite(expiration) || expiration <= now) {
@@ -70,7 +75,7 @@ export async function checkRenewal(env, now = Date.now()) {
 }
 
 export default {
-  async scheduled(_controller, env) {
+  async scheduled(controller, env) {
     const domains = [...new Set(
       (env.DNSHE_DOMAIN ?? "").split(",").map((domain) => domain.trim().toLowerCase()).filter(Boolean),
     )];
@@ -85,7 +90,13 @@ export default {
       try {
         let event;
         try {
-          event = await checkRenewal({ ...env, DNSHE_DOMAIN: domain });
+          const domainEnv = { ...env, DNSHE_DOMAIN: domain };
+          if (controller.cron?.toUpperCase() !== "17 1 * * MON") {
+            const record = await lookupDomain(domainEnv);
+            event = { outcome: "lookup_ok", status: record.status, expiresAt: record.expires_at };
+          } else {
+            event = await checkRenewal(domainEnv);
+          }
         } catch (error) {
           event = { outcome: "error", message: error.message };
           failures.push(error);
