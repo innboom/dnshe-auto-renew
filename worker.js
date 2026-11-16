@@ -24,7 +24,8 @@ async function request(action, env, options = {}) {
     method: body ? "POST" : "GET",
     headers,
     body: body ? JSON.stringify(body) : undefined,
-    redirect: "error",
+    // Do not forward DNSHE credentials to a redirect target.
+    redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`DNSHE ${action} returned HTTP ${response.status}`);
