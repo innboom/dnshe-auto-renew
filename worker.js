@@ -47,7 +47,8 @@ export async function checkRenewal(env, now = Date.now()) {
   if (!record) throw new Error("Configured domain not found in DNSHE");
   if ([true, 1, "1"].includes(record.never_expires)) return { outcome: "never_expires" };
   const expiration = timestamp(record.expires_at);
-  if (record.status !== "active" || !Number.isFinite(expiration) || expiration <= now) {
+  const active = record.status === "active" || record.status === "Registered";
+  if (!active || !Number.isFinite(expiration) || expiration <= now) {
     throw new Error("Domain is not active with a usable future expiration");
   }
   const remaining = expiration - now;

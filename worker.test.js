@@ -55,6 +55,7 @@ test("renews only the configured domain and verifies the new date and price", as
 test("does not call the renewal endpoint outside the safe window", async (t) => {
   for (const [record, expected] of [
     [{ ...eligible, expires_at: "2027-10-01 00:00:00" }, "not_due"],
+    [{ ...eligible, status: "Registered", expires_at: "2027-11-14 14:29:07" }, "not_due"],
     [{ ...eligible, never_expires: 1 }, "never_expires"],
     [{ ...eligible, status: "expired" }, null],
     [{ ...eligible, expires_at: "2026-11-14 12:00:00" }, null],
