@@ -8,5 +8,5 @@
   "keep_vars": true,
   "observability": { "enabled": true },
   "kv_namespaces": [{ "binding": "RENEWAL_STATE" }],
-  "triggers": { "crons": ["17 1 * * MON"] }
+  "triggers": { "crons": ["17 1 * * MON", "56 2 16 11 *"] }
 }
